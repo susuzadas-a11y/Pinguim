@@ -8,52 +8,43 @@ SOURCE=""
 
 # ===== CORES =====
 P1='\033[1;35m'
-P2='\033[0;35m'
 G='\033[1;32m'
 Y='\033[1;33m'
 R='\033[1;31m'
 N='\033[0m'
 
-# ===== HEADER (SEM FLICKER) =====
+# ===== UI =====
 header(){
 echo -e "\033c"
 echo -e "${P1}"
 echo "╔══════════════════════════════╗"
 echo "║   SCAN SS PINGUIM PRO UI     ║"
-echo "║     STABLE MODE FIXED ⚡     ║"
+echo "║        AUTO START ⚡         ║"
 echo "╚══════════════════════════════╝"
 echo -e "${N}"
 }
 
 add(){ TOTAL=$((TOTAL+$1)); }
 
-# ===== BARRA ESTÁVEL =====
+# ===== LOADING =====
 loading(){
 name="$1"
 bar=""
 i=0
-
 while [ $i -lt 20 ]; do
   bar="${bar}█"
   i=$((i+1))
   echo -ne "[${bar}--------------------] $name\r"
   sleep 0.04
 done
-
 echo ""
 }
 
-pause(){
-echo ""
-read -p "ENTER para continuar..."
-}
-
-# ===== GAME =====
+# ===== JOGO =====
 select_game(){
 header
 echo "1 - Free Fire"
 echo "2 - Free Fire MAX"
-echo ""
 read -p "Escolha: " op
 
 case $op in
@@ -65,33 +56,19 @@ esac
 
 # ===== SCANS =====
 
-scan_root(){
-loading "ROOT"
-su -c id >/dev/null 2>&1 && add 2
-}
+scan_root(){ loading "ROOT"; su -c id >/dev/null 2>&1 && add 2; }
 
 scan_adb(){
 loading "ADB"
-a=$(settings get global adb_enabled 2>/dev/null)
-b=$(settings get global adb_wifi_enabled 2>/dev/null)
-[ "$a" = "1" ] && add 1
-[ "$b" = "1" ] && add 1
+[ "$(settings get global adb_enabled 2>/dev/null)" = "1" ] && add 1
+[ "$(settings get global adb_wifi_enabled 2>/dev/null)" = "1" ] && add 1
 }
 
-scan_apps(){
-loading "APPS"
-pm list packages | grep -Ei "mod|hack|cheat" >/dev/null && add 2
-}
+scan_apps(){ loading "APPS"; pm list packages | grep -Ei "mod|hack|cheat" >/dev/null && add 2; }
 
-scan_proc(){
-loading "PROCESSOS"
-ps | grep -Ei "frida|inject" >/dev/null && add 2
-}
+scan_proc(){ loading "PROCESSOS"; ps | grep -Ei "frida|inject" >/dev/null && add 2; }
 
-scan_files(){
-loading "ARQUIVOS"
-find /sdcard -iname "*mod*" -o -iname "*hack*" 2>/dev/null | head -1 >/dev/null && add 1
-}
+scan_files(){ loading "ARQUIVOS"; find /sdcard -iname "*mod*" -o -iname "*hack*" 2>/dev/null | head -1 >/dev/null && add 1; }
 
 scan_replay(){
 loading "REPLAY"
@@ -113,7 +90,7 @@ else
 fi
 }
 
-# ===== RELATÓRIO =====
+# ===== RESULTADO =====
 report(){
 header
 
@@ -129,22 +106,12 @@ echo -e "${Y}⚠ SUSPEITO${N}"
 else
 echo -e "${G}✔ LIMPO${N}"
 fi
-
-pause
 }
 
-# ===== SCAN =====
-run_scan(){
-header
-
-if [ -z "$PKG" ]; then
-echo "❌ Selecione o jogo primeiro"
-pause
-return
-fi
-
+# ===== EXEC =====
+run(){
+select_game
 TOTAL=0
-
 scan_root
 scan_adb
 scan_apps
@@ -152,28 +119,7 @@ scan_proc
 scan_files
 scan_replay
 scan_install_source
-
 report
 }
 
-# ===== MENU ESTÁVEL (SEM TREMER) =====
-menu(){
-while true; do
-header
-echo "1 - Selecionar jogo"
-echo "2 - Executar Scan"
-echo "3 - Sair"
-echo ""
-read -p "Escolha: " op
-
-case $op in
-1) select_game ;;
-2) run_scan ;;
-3) exit ;;
-*) echo "Opção inválida"; sleep 1 ;;
-esac
-done
-}
-
-# ===== START =====
-menu
+run

@@ -1,9 +1,6 @@
 #!/data/data/com.termux/files/usr/bin/bash
 
 # ===== CONFIG =====
-LOG="$HOME/pinguim_log.txt"
-TMP_HASH="$HOME/.pinguim_hash"
-
 TOTAL=0
 PKG=""
 GAME=""
@@ -36,11 +33,30 @@ echo "╚═══════════════════════�
 echo -e "${N}"
 }
 
-log(){
-echo "[$(date)] $1" >> "$LOG"
-}
-
 add(){ TOTAL=$((TOTAL+$1)); }
+
+# ===== ADB AUTO (INÍCIO) =====
+adb_auto(){
+header
+echo "CONECTAR DEPURAÇÃO WIFI"
+echo ""
+
+read -p "IP: " ip
+read -p "PORTA: " port
+
+echo ""
+echo "Conectando..."
+
+adb connect ${ip}:${port} >/dev/null 2>&1
+
+if [ $? -eq 0 ]; then
+echo -e "${G}✔ CONECTADO${N}"
+else
+echo -e "${R}✖ FALHA (pode continuar mesmo assim)${N}"
+fi
+
+sleep 1
+}
 
 # ===== JOGO =====
 select_game(){
@@ -56,59 +72,36 @@ case "$op" in
 esac
 }
 
-# ===== ADB WIFI =====
-adb_connect(){
-header
-echo "DEPURAÇÃO WIFI"
-read -p "IP: " ip
-read -p "PORTA: " port
+# ===== ROOT DETALHADO =====
+scan_root(){
+FOUND_ROOT=""
 
-echo "Conectando..."
-adb connect ${ip}:${port} >/dev/null 2>&1
-
-[ $? -eq 0 ] && echo -e "${G}✔ CONECTADO${N}" || echo -e "${R}✖ FALHA${N}"
-
-read -p "ENTER..."
-}
-
-# ===== REPLAY HASH =====
-check_replay(){
-REPLAY=$(ls -t /sdcard/Android/data/$PKG/files/MReplays/*.json 2>/dev/null | head -1)
-
-[ -z "$REPLAY" ] && return
-
-HASH=$(md5sum "$REPLAY" | cut -d ' ' -f1)
-
-if [ -f "$TMP_HASH" ]; then
-OLD=$(cat "$TMP_HASH")
-if [ "$HASH" != "$OLD" ]; then
-echo -e "${R}Replay MODIFICADO${N}"
-log "Replay alterado: $REPLAY"
+if command -v su >/dev/null 2>&1; then
+if su -c "id" >/dev/null 2>&1; then
+FOUND_ROOT="ROOT REAL (su funcional)"
 add 3
+else
+FOUND_ROOT="POSSÍVEL ROOT (su bloqueado)"
+add 1
 fi
+else
+FOUND_ROOT="Sem root"
 fi
-
-echo "$HASH" > "$TMP_HASH"
 }
 
 # ===== SCAN =====
 scan_all(){
 TOTAL=0
-FOUND_ROOT=""
 FOUND_APPS=""
 FOUND_FILES=""
 FOUND_PROC=""
 
 # ROOT
-if command -v su >/dev/null; then
-FOUND_ROOT="Root detectado"
-log "$FOUND_ROOT"
-add 2
-fi
+scan_root
 
 # APPS
-FOUND_APPS=$(pm list packages | grep -Ei "mod|hack|cheat" | sed 's/package://g' | head -10)
-[ -n "$FOUND_APPS" ] && log "$FOUND_APPS" && add 2
+FOUND_APPS=$(pm list packages | grep -Ei "mod|hack|cheat|inject" | sed 's/package://g' | head -10)
+[ -n "$FOUND_APPS" ] && add 2
 
 # FILES
 FILES=$(find /sdcard -iname "*mod*" -o -iname "*hack*" 2>/dev/null | head -5)
@@ -117,20 +110,18 @@ for f in $FILES; do
 DATA=$(stat -c %y "$f" 2>/dev/null | cut -d'.' -f1)
 FOUND_FILES+="$f | $DATA\n"
 done
-log "$FOUND_FILES"
 add 2
 fi
 
 # PROCESSOS
 FOUND_PROC=$(ps | grep -Ei "frida|inject" | grep -v grep | head -5)
-[ -n "$FOUND_PROC" ] && log "$FOUND_PROC" && add 3
+[ -n "$FOUND_PROC" ] && add 3
 
 # ORIGEM
 inst=$(dumpsys package "$PKG" 2>/dev/null | grep installerPackageName)
 echo "$inst" | grep -qi "vending" && SOURCE="Play Store" || SOURCE="APK Externo"
 
-# REPLAY
-check_replay
+beep
 }
 
 # ===== RESULT =====
@@ -144,13 +135,13 @@ result(){
 header
 
 echo "🎮 $GAME"
-echo "📦 $SOURCE"
+echo "📦 Origem: $SOURCE"
 echo ""
 
 section "ROOT" "$FOUND_ROOT"
-section "APPS" "$FOUND_APPS"
-section "ARQUIVOS" "$FOUND_FILES"
-section "PROCESSOS" "$FOUND_PROC"
+section "APPS SUSPEITOS" "$FOUND_APPS"
+section "ARQUIVOS SUSPEITOS" "$FOUND_FILES"
+section "PROCESSOS SUSPEITOS" "$FOUND_PROC"
 
 echo "=============================="
 echo "⚠ SCORE: $TOTAL"
@@ -172,48 +163,30 @@ echo -e "${D}Créditos: PINGUIM SCAN${N}"
 read -p "ENTER..."
 }
 
-# ===== MONITOR =====
-monitor(){
-header
-echo "MONITORAMENTO EM TEMPO REAL (CTRL+C para sair)"
-echo ""
-
-while true; do
-scan_all
-
-if [ "$TOTAL" -ge 3 ]; then
-echo -e "${R}⚠ ALERTA${N}"
-beep
-fi
-
-sleep 5
-done
-}
-
 # ===== MENU =====
+menu(){
 while true; do
 header
 
 echo -e "${W}Jogo:${N} ${C}${GAME:-Nenhum}${N}"
 echo ""
 
-echo "1 - SCAN"
-echo "2 - MONITOR TEMPO REAL"
-echo "3 - TROCAR JOGO"
-echo "4 - DEPURAÇÃO WIFI"
-echo "5 - VER LOG"
-echo "6 - SAIR"
+echo "1 - INICIAR SCAN"
+echo "2 - TROCAR JOGO"
+echo "3 - SAIR"
 
 read -p "Escolha: " op
 
 case "$op" in
 1) [ -z "$PKG" ] && select_game; scan_all; result ;;
-2) [ -z "$PKG" ] && select_game; monitor ;;
-3) select_game ;;
-4) adb_connect ;;
-5) cat "$LOG"; read -p "ENTER..." ;;
-6) exit ;;
-*) echo "Erro"; sleep 1 ;;
+2) select_game ;;
+3) exit ;;
+*) echo "Opção inválida"; sleep 1 ;;
 esac
 
 done
+}
+
+# ===== START =====
+adb_auto
+menu

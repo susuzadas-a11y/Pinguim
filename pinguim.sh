@@ -1,10 +1,20 @@
 #!/data/data/com.termux/files/usr/bin/bash
 
+# ===== AUTO PRIMEIRA EXECUÇÃO =====
+FIRST_RUN="$HOME/.pinguim_first"
+if [ ! -f "$FIRST_RUN" ]; then
+  touch "$FIRST_RUN"
+else
+  echo "Sistema já inicializado"
+fi
+
 # ===== CONFIG =====
 OWNER_PIN="7865"
 BLOCK_FILE="$HOME/.pinguim_block"
 USED_PINS="$HOME/.pinguim_used_pins"
 HISTORY="$HOME/.pinguim_history.log"
+
+touch "$USED_PINS"
 
 VALID_PINS=("01" "2002" "9321" "3469" "9397" "2773" "83872" "02773" "2937" "15838" "205273" "2862" "7262" "62835")
 
@@ -36,7 +46,7 @@ bd=$(printf "%0.s#" $(seq 1 $d))
 bl=$(printf "%0.s " $(seq 1 $l))
 ((i%2==0)) && c="$P1" || c="$P2"
 printf "\r${c}[%s%s] %d%%${N}" "$bd" "$bl" "$i"
-sleep 0.015
+sleep 0.01
 done; echo ""
 }
 
@@ -44,13 +54,15 @@ done; echo ""
 get_id(){
 id=$(getprop ro.serialno 2>/dev/null)
 [ -z "$id" ] && id=$(settings get secure android_id 2>/dev/null)
+[ -z "$id" ] && id="unknown"
 echo "$id"
 }
 ID=$(get_id)
 
-# ===== LOGIN =====
+# ===== BLOCK =====
 [ -f "$BLOCK_FILE" ] && [ "$(cat "$BLOCK_FILE")" = "$ID" ] && exit 1
 
+# ===== LOGIN =====
 login(){
 t=3
 while [ $t -gt 0 ]; do
@@ -87,29 +99,27 @@ case $op in
 esac
 }
 
-# ===== CONTADOR =====
 TOTAL=0
 add(){ TOTAL=$((TOTAL+$1)); }
 
 # ===== SCANS =====
-
 scan_root(){
 box "ROOT"
-command -v su >/dev/null && echo -e "${Y}⚠ Root detectado${N}" && add 2 || echo -e "${G}✔ OK${N}"
+su -c id >/dev/null 2>&1 && echo "ROOT detectado" && add 2 || echo "OK"
 }
 
 scan_adb(){
 box "ADB"
 a=$(settings get global adb_enabled 2>/dev/null)
 b=$(settings get global adb_wifi_enabled 2>/dev/null)
-[ "$a" = "1" ] && echo -e "${Y}USB ativo${N}" && add 1 || echo "USB off"
-[ "$b" = "1" ] && echo -e "${Y}WiFi ativo${N}" && add 1
+[ "$a" = "1" ] && echo "USB ativo" && add 1
+[ "$b" = "1" ] && echo "WiFi ativo" && add 1
 }
 
 scan_tmp(){
 box "TMP"
 l=$(ls /data/local/tmp 2>/dev/null)
-[ -n "$l" ] && echo "$l" && add 1 || echo -e "${G}✔ Limpo${N}"
+[ -n "$l" ] && echo "$l" && add 1 || echo "OK"
 }
 
 scan_logs(){
@@ -121,44 +131,53 @@ c=$(logcat -d 2>/dev/null | wc -l)
 scan_apps(){
 box "APPS"
 p=$(pm list packages | grep -Ei "mod|cheat|hack")
-[ -n "$p" ] && echo "$p" && add 2 || echo "Nenhum"
+[ -n "$p" ] && echo "$p" && add 2 || echo "OK"
 }
 
 scan_proc(){
 box "PROCESSOS"
-ps -A 2>/dev/null | grep -Ei "frida|inject" && add 2 || echo "OK"
+ps | grep -Ei "frida|inject" && add 2 || echo "OK"
 }
 
 scan_files(){
 box "ARQUIVOS"
 f=$(find /sdcard -iname "*mod*" -o -iname "*cheat*" 2>/dev/null | head -5)
-[ -n "$f" ] && echo "$f" && add 1 || echo "Nada"
+[ -n "$f" ] && echo "$f" && add 1 || echo "OK"
 }
 
 scan_replay(){
 box "REPLAY"
+
 S=$(ls -t /sdcard/Android/data/com.dts.freefiremax/files/MReplays/*.json 2>/dev/null | head -1)
 D=$(ls -t /sdcard/Android/data/com.dts.freefireth/files/MReplays/*.json 2>/dev/null | head -1)
 
-[ -z "$S" ] || [ -z "$D" ] && echo "Sem dados" && return
+if [ -z "$S" ] || [ -z "$D" ]; then
+  echo "Sem dados"
+  return
+fi
 
-h1=$(md5sum "$S" | cut -d ' ' -f1)
-h2=$(md5sum "$D" | cut -d ' ' -f1)
+h1=$(md5sum "$S" 2>/dev/null | cut -d ' ' -f1)
+h2=$(md5sum "$D" 2>/dev/null | cut -d ' ' -f1)
 
 [ "$h1" = "$h2" ] && echo "Replay igual" && add 3
 
-t1=$(stat -c %Y "$S"); t2=$(stat -c %Y "$D")
+t1=$(date -r "$S" +%s 2>/dev/null)
+t2=$(date -r "$D" +%s 2>/dev/null)
+
+[ -n "$t1" ] && [ -n "$t2" ] && {
 d=$((t2-t1))
-[ "$d" -lt 60 ] && echo "Transferido recente" && add 1
+[ "$d" -lt 60 ] && echo "Transferência recente" && add 1
+}
 }
 
 # ===== RELATÓRIO =====
 report(){
 line
-echo -e "${P1}TOTAL: $TOTAL${N}"
-[ "$TOTAL" -ge 5 ] && echo -e "${R}ALTO RISCO${N}" || \
-[ "$TOTAL" -ge 2 ] && echo -e "${Y}SUSPEITO${N}" || \
-echo -e "${G}LIMPO${N}"
+echo "TOTAL: $TOTAL"
+
+[ "$TOTAL" -ge 5 ] && echo "ALTO RISCO" || \
+[ "$TOTAL" -ge 2 ] && echo "SUSPEITO" || \
+echo "LIMPO"
 
 echo "$(date) | $GAME | $TOTAL" >> "$HISTORY"
 line
@@ -181,4 +200,4 @@ scan_replay
 
 report
 
-echo -e "${P1}FINALIZADO${N}"
+echo "FINALIZADO"

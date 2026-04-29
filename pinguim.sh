@@ -14,11 +14,9 @@ Y='\033[1;33m'
 R='\033[1;31m'
 N='\033[0m'
 
-# ===== UI =====
-clear_screen(){ clear; }
-
+# ===== HEADER (SEM FLICKER) =====
 header(){
-clear_screen
+echo -e "\033c"
 echo -e "${P1}"
 echo "╔══════════════════════════════╗"
 echo "║   SCAN SS PINGUIM PRO UI     ║"
@@ -29,7 +27,7 @@ echo -e "${N}"
 
 add(){ TOTAL=$((TOTAL+$1)); }
 
-# ===== BARRA ESTÁVEL (SEM TREMER) =====
+# ===== BARRA ESTÁVEL =====
 loading(){
 name="$1"
 bar=""
@@ -39,7 +37,7 @@ while [ $i -lt 20 ]; do
   bar="${bar}█"
   i=$((i+1))
   echo -ne "[${bar}--------------------] $name\r"
-  sleep 0.05
+  sleep 0.04
 done
 
 echo ""
@@ -133,7 +131,6 @@ echo -e "${G}✔ LIMPO${N}"
 fi
 
 pause
-menu
 }
 
 # ===== SCAN =====
@@ -143,7 +140,7 @@ header
 if [ -z "$PKG" ]; then
 echo "❌ Selecione o jogo primeiro"
 pause
-menu
+return
 fi
 
 TOTAL=0
@@ -159,8 +156,9 @@ scan_install_source
 report
 }
 
-# ===== MENU =====
+# ===== MENU ESTÁVEL (SEM TREMER) =====
 menu(){
+while true; do
 header
 echo "1 - Selecionar jogo"
 echo "2 - Executar Scan"
@@ -169,11 +167,12 @@ echo ""
 read -p "Escolha: " op
 
 case $op in
-1) select_game; menu ;;
+1) select_game ;;
 2) run_scan ;;
 3) exit ;;
-*) menu ;;
+*) echo "Opção inválida"; sleep 1 ;;
 esac
+done
 }
 
 # ===== START =====

@@ -1,38 +1,7 @@
 #!/data/data/com.termux/files/usr/bin/bash
 
-# ===== AUTO START (SPLASH) =====
-if [ -z "$PINGUIM_STARTED" ]; then
-export PINGUIM_STARTED=1
-
-printf "\033c"
-echo "██████╗ ██╗███╗   ██╗ ██████╗ ██╗   ██╗██╗███╗   ███╗"
-echo "██╔══██╗██║████╗  ██║██╔════╝ ██║   ██║██║████╗ ████║"
-echo "██████╔╝██║██╔██╗ ██║██║  ███╗██║   ██║██║██╔████╔██║"
-echo "██╔═══╝ ██║██║╚██╗██║██║   ██║██║   ██║██║██║╚██╔╝██║"
-echo "██║     ██║██║ ╚████║╚██████╔╝╚██████╔╝██║██║ ╚═╝ ██║"
-echo "╚═╝     ╚═╝╚═╝  ╚═══╝ ╚═════╝  ╚═════╝ ╚═╝╚═╝     ╚═╝"
-
-echo ""
-echo "Iniciando..."
-bar=""
-for i in $(seq 1 25); do
-bar="${bar}█"
-printf "\r[%-25s]" "$bar"
-sleep 0.03
-done
-sleep 0.2
-fi
-
-# ===== CONFIG =====
-TOTAL=0
-PKG=""
-GAME=""
-SOURCE="Desconhecido"
-
-FOUND_ROOT=""
-FOUND_APPS=""
-FOUND_FILES=""
-FOUND_PROC=""
+# ===== SOM =====
+beep(){ printf "\a"; }
 
 # ===== CORES =====
 P='\033[1;35m'
@@ -44,202 +13,157 @@ W='\033[1;37m'
 D='\033[2m'
 N='\033[0m'
 
-# ===== TERMINAL =====
-clear_screen(){ printf "\033c"; }
-hide_cursor(){ tput civis 2>/dev/null; }
-show_cursor(){ tput cnorm 2>/dev/null; }
+clear
 
-enable_input(){ stty echo icanon 2>/dev/null; }
-disable_input(){ stty -echo -icanon 2>/dev/null; }
-
-cleanup(){
-show_cursor
-enable_input
-}
-trap cleanup EXIT
-
-# ===== TECLAS =====
-read_key(){
-key=$(dd bs=1 count=1 2>/dev/null)
-if [[ "$key" == $'\x1b' ]]; then
-key+=$(dd bs=1 count=2 2>/dev/null)
-fi
-echo "$key"
-}
-
-# ===== UI =====
-header(){
-clear_screen
+# ===== SPLASH =====
 echo -e "${P}"
-echo "╔══════════════════════════════════════╗"
-echo "║        PINGUIM SCANNER APP PRO       ║"
-echo "╚══════════════════════════════════════╝"
+echo ""
+echo "        ██████╗ ██╗███╗   ██╗ ██████╗ ██╗   ██╗██╗███╗   ███╗"
+echo "        ██╔══██╗██║████╗  ██║██╔════╝ ██║   ██║██║████╗ ████║"
+echo "        ██████╔╝██║██╔██╗ ██║██║  ███╗██║   ██║██║██╔████╔██║"
+echo "        ██╔═══╝ ██║██║╚██╗██║██║   ██║██║   ██║██║██║╚██╔╝██║"
+echo "        ██║     ██║██║ ╚████║╚██████╔╝╚██████╔╝██║██║ ╚═╝ ██║"
+echo "        ╚═╝     ╚═╝╚═╝  ╚═══╝ ╚═════╝  ╚═════╝ ╚═╝╚═╝     ╚═╝"
+echo -e "${N}"
+
+echo "Iniciando..."
+bar=""
+for i in $(seq 1 30); do
+bar="${bar}█"
+printf "\r[%-30s]" "$bar"
+sleep 0.02
+done
+sleep 0.3
+
+# ===== CONFIG =====
+TOTAL=0
+PKG=""
+GAME=""
+
+# ===== HEADER =====
+header(){
+clear
+echo -e "${P}"
+echo "╔════════════════════════════════╗"
+echo "║                                ║"
+echo "║          P I N G U I M          ║"
+echo "║            S C A N             ║"
+echo "║                                ║"
+echo "╚════════════════════════════════╝"
 echo -e "${N}"
 }
 
-big_button(){
-if [ "$1" -eq 1 ]; then
-echo -e "${G}        ┌──────────────────────────┐"
-echo "        │    ▶ INICIAR SCANNER     │"
-echo "        └──────────────────────────┘${N}"
-else
-echo -e "${D}        ┌──────────────────────────┐"
-echo "        │      INICIAR SCANNER     │"
-echo "        └──────────────────────────┘${N}"
-fi
-}
-
-menu_item(){
-if [ "$2" -eq 1 ]; then
-echo -e "${C} ▶ $1${N}"
-else
-echo "   $1"
-fi
-}
-
+# ===== LOADING =====
 loading(){
-bar=""
-for i in $(seq 1 25); do
-bar="${bar}█"
-printf "\r[%-25s] %s" "$bar" "$1"
-sleep 0.02
+msg=$1
+for i in $(seq 1 20); do
+printf "\r${C}▶ $msg... ${i}%%${N}"
+sleep 0.015
 done
 echo ""
 }
 
 add(){ TOTAL=$((TOTAL+$1)); }
 
-# ===== GAME =====
+# ===== JOGO =====
 select_game(){
-enable_input
 header
 echo "1 - Free Fire"
 echo "2 - Free Fire MAX"
 read -p "Escolha: " op
-disable_input
 
 case "$op" in
 1) PKG="com.dts.freefireth"; GAME="Free Fire" ;;
 2) PKG="com.dts.freefiremax"; GAME="Free Fire MAX" ;;
+*) select_game ;;
 esac
 }
 
-# ===== SCANS =====
-scan_root(){
-loading "ROOT"
-command -v su >/dev/null && FOUND_ROOT="Root detectado" && add 2 || FOUND_ROOT="OK"
-}
-
-scan_apps(){
-loading "APPS"
-FOUND_APPS=$(pm list packages | grep -Ei "mod|hack|cheat" | head -5)
-[ -n "$FOUND_APPS" ] && add 2
-}
-
-scan_files(){
-loading "FILES"
-FOUND_FILES=$(find /sdcard -iname "*mod*" -o -iname "*hack*" 2>/dev/null | head -5)
-[ -n "$FOUND_FILES" ] && add 1
-}
-
-scan_proc(){
-loading "PROCESSOS"
-FOUND_PROC=$(ps | grep -Ei "frida|inject" | head -3)
-[ -n "$FOUND_PROC" ] && add 2
-}
-
-scan_install(){
-loading "INSTALAÇÃO"
-inst=$(dumpsys package "$PKG" 2>/dev/null | grep installerPackageName)
-
-if echo "$inst" | grep -qi "vending"; then
-SOURCE="Play Store"
-elif [ -n "$inst" ]; then
-SOURCE="APK externo"
-fi
-}
-
-# ===== RESULT =====
-section(){
-echo -e "${C}▶ $1${N}"
-[ -n "$2" ] && echo -e "${Y}$2${N}" || echo -e "${G}✔ Nada encontrado${N}"
+# ===== ADB WIFI =====
+adb_connect(){
+header
+echo "DEPURAÇÃO WIFI"
 echo ""
+
+read -p "IP: " ip
+read -p "PORTA: " port
+
+loading "Conectando"
+
+adb connect ${ip}:${port} >/dev/null 2>&1
+
+if [ $? -eq 0 ]; then
+beep
+echo -e "${G}✔ CONECTADO${N}"
+else
+echo -e "${R}✖ FALHA${N}"
+fi
+
+read -p "ENTER..."
 }
 
+# ===== SCAN =====
+scan_all(){
+TOTAL=0
+
+loading "ROOT"
+command -v su >/dev/null && add 2
+
+loading "APPS"
+pm list packages | grep -Ei "mod|hack|cheat" >/dev/null && add 2
+
+loading "ARQUIVOS"
+find /sdcard -iname "*mod*" -o -iname "*hack*" 2>/dev/null | head -1 | grep . >/dev/null && add 1
+
+loading "PROCESSOS"
+ps | grep -Ei "frida|inject" >/dev/null && add 2
+
+beep
+}
+
+# ===== RESULTADO =====
 result(){
-enable_input
 header
 
-echo "🎮 JOGO: $GAME"
-echo "📦 ORIGEM: $SOURCE"
+echo "🎮 $GAME"
 echo ""
 
-section "ROOT" "$FOUND_ROOT"
-section "APPS" "$FOUND_APPS"
-section "FILES" "$FOUND_FILES"
-section "PROCESSOS" "$FOUND_PROC"
-
-echo "=============================="
-echo "⚠ SCORE: $TOTAL"
+echo "SCORE: $TOTAL"
 echo ""
 
-[ "$TOTAL" -ge 5 ] && echo -e "${R}ALTO RISCO${N}" || \
-[ "$TOTAL" -ge 2 ] && echo -e "${Y}SUSPEITO${N}" || \
-echo -e "${G}LIMPO${N}"
+if [ "$TOTAL" -ge 1 ]; then
+echo -e "${R}⚠ DETECÇÃO ENCONTRADA${N}"
+echo -e "${Y}APLIQUE O WO OU PROCURE O SS PINGUIM NA ORG FALCON${N}"
+else
+echo -e "${G}✔ LIMPO${N}"
+fi
 
-read -p "ENTER para voltar..."
-disable_input
+echo ""
+echo -e "${D}Créditos: PINGUIM SS${N}"
+
+read -p "ENTER..."
 }
 
-run_scan(){
-[ -z "$PKG" ] && select_game
-
-TOTAL=0
-FOUND_ROOT=""
-FOUND_APPS=""
-FOUND_FILES=""
-FOUND_PROC=""
-
-scan_root
-scan_apps
-scan_files
-scan_proc
-scan_install
-
-result
-}
-
-# ===== HOME =====
-home(){
-hide_cursor
-disable_input
-idx=0
-
+# ===== MENU NUMÉRICO =====
 while true; do
 header
+
 echo -e "${W}Jogo:${N} ${C}${GAME:-Nenhum}${N}"
 echo ""
 
-big_button $([ "$idx" -eq 0 ] && echo 1 || echo 0)
-echo ""
+echo "1 - INICIAR SCAN"
+echo "2 - TROCAR JOGO"
+echo "3 - DEPURAÇÃO WIFI"
+echo "4 - SAIR"
 
-menu_item "Trocar jogo" $([ "$idx" -eq 1 ] && echo 1 || echo 0)
-menu_item "Sair" $([ "$idx" -eq 2 ] && echo 1 || echo 0)
+read -p "Escolha: " op
 
-key=$(read_key)
-
-case "$key" in
-$'\x1b[A') ((idx--)); [ $idx -lt 0 ] && idx=2 ;;
-$'\x1b[B') ((idx++)); [ $idx -gt 2 ] && idx=0 ;;
-"")
-case "$idx" in
-0) run_scan ;;
-1) select_game ;;
-2) cleanup; exit ;;
+case "$op" in
+1) [ -z "$PKG" ] && select_game; scan_all; result ;;
+2) select_game ;;
+3) adb_connect ;;
+4) exit ;;
+*) echo "Opção inválida"; sleep 1 ;;
 esac
-;;
-esac
+
 done
-}
-
-home

@@ -20,8 +20,8 @@ header(){
 clear_screen
 echo -e "${P1}"
 echo "╔════════════════════════════════╗"
-echo "║   SCAN SS PINGUIM PRO UI      ║"
-echo "║        LAUNCHER MODE ⚡        ║"
+echo "║   SCAN SS PINGUIM PRO      ║"
+echo "║       
 echo "╚════════════════════════════════╝"
 echo -e "${N}"
 }

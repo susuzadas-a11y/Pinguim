@@ -44,6 +44,7 @@ echo "╚═══════════════════════�
 }
 
 # ===== LOADING SUAVE =====
+
 loading(){
 name="$1"
 bar=""
@@ -55,7 +56,9 @@ done
 echo ""
 }
 
-# ===== MENU (SEM TREMER) =====
+add(){ TOTAL=$((TOTAL+$1)); }
+
+# ===== MENU =====
 menu(){
 while true; do
 header
@@ -69,48 +72,59 @@ case "$op" in
 1) run_scan ;;
 2) select_game ;;
 3) exit ;;
-*) echo "Opção inválida"; sleep 1 ;;
+*) echo "Inválido"; sleep 1 ;;
 esac
 done
 }
 
-# ===== SELECT GAME =====
+# ===== GAME =====
 select_game(){
 header
 echo "1 - Free Fire"
 echo "2 - Free Fire MAX"
-echo ""
 read -p "Escolha: " op
 
 case "$op" in
 1) PKG="com.dts.freefireth"; GAME="Free Fire" ;;
 2) PKG="com.dts.freefiremax"; GAME="Free Fire MAX" ;;
-*) ;;
 esac
 }
 
 # ===== SCANS =====
-add(){ TOTAL=$((TOTAL+$1)); }
 
-scan_root(){ loading "ROOT"; command -v su >/dev/null && add 2; }
-
-scan_adb(){
-loading "ADB"
-[ "$(settings get global adb_enabled 2>/dev/null)" = "1" ] && add 1
+scan_root(){
+loading "ROOT"
+if command -v su >/dev/null; then
+  FOUND_ROOT="Root detectado"
+  add 2
+else
+  FOUND_ROOT="OK"
+fi
 }
 
 scan_apps(){
 loading "APPS"
-pm list packages | grep -Ei "mod|hack" >/dev/null && add 2
+FOUND_APPS=$(pm list packages | grep -Ei "mod|hack|cheat" | head -5)
+
+[ -n "$FOUND_APPS" ] && add 2
 }
 
 scan_files(){
 loading "FILES"
-find /sdcard -iname "*mod*" 2>/dev/null | head -1 | grep -q . && add 1
+FOUND_FILES=$(find /sdcard -iname "*mod*" -o -iname "*hack*" 2>/dev/null | head -5)
+
+[ -n "$FOUND_FILES" ] && add 1
+}
+
+scan_proc(){
+loading "PROCESSOS"
+FOUND_PROC=$(ps | grep -Ei "frida|inject" | head -3)
+
+[ -n "$FOUND_PROC" ] && add 2
 }
 
 scan_install(){
-loading "SOURCE"
+loading "INSTALAÇÃO"
 inst=$(dumpsys package "$PKG" 2>/dev/null | grep installerPackageName)
 
 if echo "$inst" | grep -qi "vending"; then
@@ -120,12 +134,35 @@ SOURCE="APK externo"
 fi
 }
 
-# ===== RESULT =====
+# ===== RESULTADO BONITO =====
+show_section(){
+title="$1"
+data="$2"
+
+echo -e "${C}▶ $title${N}"
+
+if [ -n "$data" ]; then
+  echo -e "${Y}$data${N}"
+else
+  echo -e "${G}✔ Nada encontrado${N}"
+fi
+echo ""
+}
+
 result(){
 header
+
 echo "🎮 JOGO: $GAME"
 echo "📦 ORIGEM: $SOURCE"
-echo "⚠ RISCO: $TOTAL"
+echo ""
+
+show_section "ROOT" "$FOUND_ROOT"
+show_section "APPS SUSPEITOS" "$FOUND_APPS"
+show_section "ARQUIVOS" "$FOUND_FILES"
+show_section "PROCESSOS" "$FOUND_PROC"
+
+echo "=============================="
+echo "⚠ SCORE: $TOTAL"
 echo ""
 
 if [ "$TOTAL" -ge 5 ]; then
@@ -140,7 +177,7 @@ echo ""
 read -p "ENTER para voltar..."
 }
 
-# ===== RUN =====
+# ===== EXEC =====
 run_scan(){
 
 if [ -z "$PKG" ]; then
@@ -150,16 +187,19 @@ return
 fi
 
 TOTAL=0
+FOUND_ROOT=""
+FOUND_APPS=""
+FOUND_FILES=""
+FOUND_PROC=""
 
 scan_root
-scan_adb
 scan_apps
 scan_files
+scan_proc
 scan_install
 
 result
 }
 
 # ===== START =====
-splash
 menu

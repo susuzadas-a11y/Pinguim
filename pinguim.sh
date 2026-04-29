@@ -6,45 +6,43 @@ PKG=""
 GAME=""
 SOURCE="Desconhecido"
 
+FOUND_ROOT=""
+FOUND_APPS=""
+FOUND_FILES=""
+FOUND_PROC=""
+
 # ===== CORES =====
 P='\033[1;35m'
 G='\033[1;32m'
 Y='\033[1;33m'
 R='\033[1;31m'
 C='\033[1;36m'
+W='\033[1;37m'
 N='\033[0m'
 
-# ===== LIMPAR TELA =====
-clear_screen(){
-  printf "\033c"
-}
-
-# ===== TELA INICIAL (APP STYLE) =====
-splash(){
-clear_screen
-echo -e "${P}"
-echo "██████╗ ██╗███╗   ██╗ ██████╗ ██╗   ██╗██╗███╗   ███╗"
-echo "██╔══██╗██║████╗  ██║██╔════╝ ██║   ██║██║████╗ ████║"
-echo "██████╔╝██║██╔██╗ ██║██║  ███╗██║   ██║██║██╔████╔██║"
-echo "██╔═══╝ ██║██║╚██╗██║██║   ██║██║   ██║██║██║╚██╔╝██║"
-echo "██║     ██║██║ ╚████║╚██████╔╝╚██████╔╝██║██║ ╚═╝ ██║"
-echo "╚═╝     ╚═╝╚═╝  ╚═══╝ ╚═════╝  ╚═════╝ ╚═╝╚═╝     ╚═╝"
-echo -e "${N}"
-echo ""
-echo -e "${C}Iniciando sistema...${N}"
-sleep 1
-}
+clear_screen(){ printf "\033c"; }
 
 # ===== HEADER =====
 header(){
 clear_screen
-echo -e "${P}╔══════════════════════════════╗"
-echo "║        PINGUIM APP UI        ║"
-echo "╚══════════════════════════════╝${N}"
+echo -e "${P}"
+echo "╔══════════════════════════════════╗"
+echo "║        PINGUIM SCANNER APP       ║"
+echo "╚══════════════════════════════════╝"
+echo -e "${N}"
 }
 
-# ===== LOADING SUAVE =====
+# ===== BOTÃO GRANDE =====
+big_button(){
+echo ""
+echo -e "${G}        ┌──────────────────────┐"
+echo -e "        │   INICIAR SCANNER   │"
+echo -e "        └──────────────────────┘${N}"
+echo ""
+echo -e "${C}Pressione ENTER para iniciar${N}"
+}
 
+# ===== LOADING =====
 loading(){
 name="$1"
 bar=""
@@ -58,40 +56,24 @@ echo ""
 
 add(){ TOTAL=$((TOTAL+$1)); }
 
-# ===== MENU =====
-menu(){
-while true; do
-header
-echo "🎮 1 - Iniciar Scan"
-echo "🎯 2 - Selecionar Jogo"
-echo "❌ 3 - Sair"
-echo ""
-read -p "Escolha: " op
-
-case "$op" in
-1) run_scan ;;
-2) select_game ;;
-3) exit ;;
-*) echo "Inválido"; sleep 1 ;;
-esac
-done
-}
-
-# ===== GAME =====
+# ===== SELEÇÃO DE JOGO =====
 select_game(){
 header
+echo "Selecione o jogo:"
 echo "1 - Free Fire"
 echo "2 - Free Fire MAX"
+echo ""
+
 read -p "Escolha: " op
 
 case "$op" in
 1) PKG="com.dts.freefireth"; GAME="Free Fire" ;;
 2) PKG="com.dts.freefiremax"; GAME="Free Fire MAX" ;;
+*) select_game ;;
 esac
 }
 
 # ===== SCANS =====
-
 scan_root(){
 loading "ROOT"
 if command -v su >/dev/null; then
@@ -105,21 +87,18 @@ fi
 scan_apps(){
 loading "APPS"
 FOUND_APPS=$(pm list packages | grep -Ei "mod|hack|cheat" | head -5)
-
 [ -n "$FOUND_APPS" ] && add 2
 }
 
 scan_files(){
-loading "FILES"
+loading "ARQUIVOS"
 FOUND_FILES=$(find /sdcard -iname "*mod*" -o -iname "*hack*" 2>/dev/null | head -5)
-
 [ -n "$FOUND_FILES" ] && add 1
 }
 
 scan_proc(){
 loading "PROCESSOS"
 FOUND_PROC=$(ps | grep -Ei "frida|inject" | head -3)
-
 [ -n "$FOUND_PROC" ] && add 2
 }
 
@@ -134,13 +113,12 @@ SOURCE="APK externo"
 fi
 }
 
-# ===== RESULTADO BONITO =====
-show_section(){
+# ===== RESULTADO =====
+section(){
 title="$1"
 data="$2"
 
 echo -e "${C}▶ $title${N}"
-
 if [ -n "$data" ]; then
   echo -e "${Y}$data${N}"
 else
@@ -156,10 +134,10 @@ echo "🎮 JOGO: $GAME"
 echo "📦 ORIGEM: $SOURCE"
 echo ""
 
-show_section "ROOT" "$FOUND_ROOT"
-show_section "APPS SUSPEITOS" "$FOUND_APPS"
-show_section "ARQUIVOS" "$FOUND_FILES"
-show_section "PROCESSOS" "$FOUND_PROC"
+section "ROOT" "$FOUND_ROOT"
+section "APPS" "$FOUND_APPS"
+section "ARQUIVOS" "$FOUND_FILES"
+section "PROCESSOS" "$FOUND_PROC"
 
 echo "=============================="
 echo "⚠ SCORE: $TOTAL"
@@ -179,11 +157,8 @@ read -p "ENTER para voltar..."
 
 # ===== EXEC =====
 run_scan(){
-
 if [ -z "$PKG" ]; then
-echo "Selecione o jogo primeiro"
-sleep 1
-return
+select_game
 fi
 
 TOTAL=0
@@ -201,5 +176,29 @@ scan_install
 result
 }
 
+# ===== APP HOME =====
+home(){
+while true; do
+header
+
+echo -e "${W}Jogo selecionado:${N} ${C}${GAME:-Nenhum}${N}"
+
+big_button
+
+echo "1 - Trocar jogo"
+echo "2 - Sair"
+echo ""
+
+read -p "Escolha ou ENTER: " op
+
+case "$op" in
+"") run_scan ;;
+1) select_game ;;
+2) exit ;;
+*) ;;
+esac
+done
+}
+
 # ===== START =====
-menu
+home

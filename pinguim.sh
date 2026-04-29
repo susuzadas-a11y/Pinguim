@@ -4,6 +4,7 @@
 TOTAL=0
 PKG=""
 GAME=""
+SOURCE=""
 
 # ===== CORES =====
 P1='\033[1;35m'
@@ -21,22 +22,26 @@ clear_screen
 echo -e "${P1}"
 echo "╔══════════════════════════════╗"
 echo "║   SCAN SS PINGUIM PRO UI     ║"
-echo "║     LOADING SCAN MODE ⚡      ║"
+echo "║     STABLE MODE FIXED ⚡     ║"
 echo "╚══════════════════════════════╝"
 echo -e "${N}"
 }
 
 add(){ TOTAL=$((TOTAL+$1)); }
 
-# ===== BARRA DE LOADING =====
+# ===== BARRA ESTÁVEL (SEM TREMER) =====
 loading(){
 name="$1"
-for i in $(seq 1 20); do
-  bar=$(printf "%0.s█" $(seq 1 $i))
-  space=$(printf "%0.s " $(seq 1 $((20-i))))
-  printf "\r${P2}[%s%s] %s${N}" "$bar" "$space" "$name"
-  sleep 0.03
+bar=""
+i=0
+
+while [ $i -lt 20 ]; do
+  bar="${bar}█"
+  i=$((i+1))
+  echo -ne "[${bar}--------------------] $name\r"
+  sleep 0.05
 done
+
 echo ""
 }
 
@@ -45,7 +50,7 @@ echo ""
 read -p "ENTER para continuar..."
 }
 
-# ===== GAME SELECT =====
+# ===== GAME =====
 select_game(){
 header
 echo "1 - Free Fire"
@@ -60,7 +65,7 @@ case $op in
 esac
 }
 
-# ===== SCANS COM LOADING =====
+# ===== SCANS =====
 
 scan_root(){
 loading "ROOT"
@@ -98,6 +103,7 @@ S=$(ls -t /sdcard/Android/data/$PKG/files/MReplays/*.json 2>/dev/null | head -1)
 
 scan_install_source(){
 loading "INSTALAÇÃO"
+
 inst=$(dumpsys package "$PKG" 2>/dev/null | grep -i installerPackageName)
 
 if echo "$inst" | grep -qi "com.android.vending"; then
@@ -109,12 +115,12 @@ else
 fi
 }
 
-# ===== RESULTADO =====
+# ===== RELATÓRIO =====
 report(){
 header
 
 echo "JOGO: $GAME"
-echo "ORIGEM: ${SOURCE:-Não verificado}"
+echo "ORIGEM: $SOURCE"
 echo "RISCO TOTAL: $TOTAL"
 echo ""
 
@@ -130,24 +136,7 @@ pause
 menu
 }
 
-# ===== MENU =====
-menu(){
-header
-echo "1 - Selecionar jogo"
-echo "2 - Executar Scan"
-echo "3 - Sair"
-echo ""
-read -p "Escolha: " op
-
-case $op in
-1) select_game; menu ;;
-2) run_scan ;;
-3) exit ;;
-*) menu ;;
-esac
-}
-
-# ===== SCAN TOTAL =====
+# ===== SCAN =====
 run_scan(){
 header
 
@@ -168,6 +157,23 @@ scan_replay
 scan_install_source
 
 report
+}
+
+# ===== MENU =====
+menu(){
+header
+echo "1 - Selecionar jogo"
+echo "2 - Executar Scan"
+echo "3 - Sair"
+echo ""
+read -p "Escolha: " op
+
+case $op in
+1) select_game; menu ;;
+2) run_scan ;;
+3) exit ;;
+*) menu ;;
+esac
 }
 
 # ===== START =====

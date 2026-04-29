@@ -1,234 +1,184 @@
 #!/data/data/com.termux/files/usr/bin/bash
 
-# ========= CONFIG =========
+# ===== CONFIG =====
 OWNER_PIN="7865"
 BLOCK_FILE="$HOME/.pinguim_block"
 USED_PINS="$HOME/.pinguim_used_pins"
-HISTORY_FILE="$HOME/.pinguim_history.log"
+HISTORY="$HOME/.pinguim_history.log"
 
-VALID_PINS=(
-"01" "2002" "9321" "3469" "9397" "2773" "83872"
-"02773" "2937" "15838" "205273" "2862" "7262" "62835"
-)
+VALID_PINS=("01" "2002" "9321" "3469" "9397" "2773" "83872" "02773" "2937" "15838" "205273" "2862" "7262" "62835")
 
-# ========= CORES =========
-P1='\033[1;35m'; P2='\033[0;35m'; W='\033[1;37m'
-G='\033[1;32m'; Y='\033[1;33m'; R='\033[1;31m'; N='\033[0m'
+# ===== CORES =====
+P1='\033[1;35m'; P2='\033[0;35m'
+W='\033[1;37m'; G='\033[1;32m'
+Y='\033[1;33m'; R='\033[1;31m'; N='\033[0m'
 
-# ========= UI =========
-line() { echo -e "${P2}══════════════════════════════════════${N}"; }
-box() {
-  line
-  printf "${P1} %-38s ${N}\n" "$1"
-  line
+# ===== UI =====
+line(){ echo -e "${P2}══════════════════════════════════════${N}"; }
+box(){ line; printf "${P1} %-38s ${N}\n" "$1"; line; }
+
+banner(){
+clear
+echo -e "${P1}"
+echo "╔══════════════════════════════════════╗"
+echo "║        SCAN SS PINGUIM ANT XIT       ║"
+echo "╠══════════════════════════════════════╣"
+echo "║              PRO+ FINAL              ║"
+echo "╚══════════════════════════════════════╝"
+echo -e "${N}"
 }
 
-banner() {
-  clear
-  echo -e "${P1}"
-  echo "╔══════════════════════════════════════╗"
-  echo "║        SCAN SS PINGUIM ANT XIT       ║"
-  echo "╠══════════════════════════════════════╣"
-  echo "║             PRO+ EDITION             ║"
-  echo "╚══════════════════════════════════════╝"
-  echo -e "${N}"
+# ===== LOADING =====
+loading(){
+for((i=0;i<=100;i++));do
+d=$((i/2)); l=$((50-d))
+bd=$(printf "%0.s#" $(seq 1 $d))
+bl=$(printf "%0.s " $(seq 1 $l))
+((i%2==0)) && c="$P1" || c="$P2"
+printf "\r${c}[%s%s] %d%%${N}" "$bd" "$bl" "$i"
+sleep 0.015
+done; echo ""
 }
 
-# ========= LOADING =========
-loading_ultra() {
-  for ((i=0;i<=100;i++)); do
-    d=$((i/2)); l=$((50-d))
-    bd=$(printf "%0.s#" $(seq 1 $d))
-    bl=$(printf "%0.s " $(seq 1 $l))
-    (( i % 2 == 0 )) && c="$P1" || c="$P2"
-
-    if   [ $i -lt 30 ]; then m="Iniciando..."
-    elif [ $i -lt 60 ]; then m="Carregando módulos..."
-    elif [ $i -lt 90 ]; then m="Processando..."
-    else                     m="Finalizando..."
-    fi
-
-    printf "\r${c}[%s%s] %d%% | %s${N}" "$bd" "$bl" "$i" "$m"
-    sleep 0.02
-  done
-  echo ""
+# ===== ID =====
+get_id(){
+id=$(getprop ro.serialno 2>/dev/null)
+[ -z "$id" ] && id=$(settings get secure android_id 2>/dev/null)
+echo "$id"
 }
+ID=$(get_id)
 
-# ========= ID =========
-get_id() {
-  id=$(getprop ro.serialno 2>/dev/null)
-  [ -z "$id" ] && id=$(settings get secure android_id 2>/dev/null)
-  [ -z "$id" ] && id=$(uname -n)
-  echo "$id"
-}
-DEVICE_ID=$(get_id)
+# ===== LOGIN =====
+[ -f "$BLOCK_FILE" ] && [ "$(cat "$BLOCK_FILE")" = "$ID" ] && exit 1
 
-# ========= BLOQUEIO =========
-if [ -f "$BLOCK_FILE" ]; then
-  [ "$(cat "$BLOCK_FILE")" = "$DEVICE_ID" ] && exit 1
+login(){
+t=3
+while [ $t -gt 0 ]; do
+banner; box "LOGIN"
+read -p "PIN: " pin
+
+[ "$pin" = "$OWNER_PIN" ] && return
+
+for p in "${VALID_PINS[@]}"; do
+if [ "$pin" = "$p" ]; then
+grep -q "^$pin:" "$USED_PINS" 2>/dev/null && exit 1
+echo "$pin:$ID:$(date +%s)" >> "$USED_PINS"
+return
 fi
+done
 
-# ========= LOGIN =========
-login() {
-  tentativas=3
-  while [ $tentativas -gt 0 ]; do
-    banner
-    box "LOGIN"
-    echo -e "${W}Digite o código:${N}"
-    read pin
+t=$((t-1))
+done
 
-    [ "$pin" = "$OWNER_PIN" ] && return
-
-    for p in "${VALID_PINS[@]}"; do
-      if [ "$pin" = "$p" ]; then
-        if [ -f "$USED_PINS" ] && grep -q "^$pin:" "$USED_PINS"; then
-          echo -e "${R}PIN já utilizado${N}"; sleep 1; exit 1
-        fi
-        NOW=$(date +%s)
-        echo "$pin:$DEVICE_ID:$NOW" >> "$USED_PINS"
-        return
-      fi
-    done
-
-    tentativas=$((tentativas-1))
-    echo -e "${Y}Código inválido (${tentativas} restantes)${N}"
-    sleep 1
-  done
-
-  echo "$DEVICE_ID" > "$BLOCK_FILE"
-  exit 1
+echo "$ID" > "$BLOCK_FILE"
+exit 1
 }
 
-# ========= EXPIRAÇÃO =========
-check_expiration() {
-  [ ! -f "$USED_PINS" ] && return
-  NOW=$(date +%s)
-  while IFS=: read -r pin id data; do
-    if [ "$id" = "$DEVICE_ID" ]; then
-      dias=$(( (NOW - data)/86400 ))
-      [ "$dias" -ge 15 ] && echo -e "${R}Licença expirada${N}" && exit 1
-    fi
-  done < "$USED_PINS"
+# ===== GAME =====
+select_game(){
+banner; box "SELECIONE"
+echo "1 - Free Fire"
+echo "2 - Free Fire MAX"
+read op
+case $op in
+1) PKG="com.dts.freefireth"; GAME="Free Fire" ;;
+2) PKG="com.dts.freefiremax"; GAME="Free Fire MAX" ;;
+*) select_game ;;
+esac
 }
 
-# ========= MENU GAME =========
-select_game() {
-  banner
-  box "SELECIONE O JOGO"
-  echo -e "${P2}1 - Free Fire${N}"
-  echo -e "${P2}2 - Free Fire MAX${N}"
-  echo -e "${P2}0 - Sair${N}"
-  read -p "> " op
-  case $op in
-    1) PKG="com.dts.freefireth"; GAME="Free Fire" ;;
-    2) PKG="com.dts.freefiremax"; GAME="Free Fire MAX" ;;
-    0) exit ;;
-    *) select_game ;;
-  esac
-}
-
-# ========= SCANS =========
+# ===== CONTADOR =====
 TOTAL=0
 add(){ TOTAL=$((TOTAL+$1)); }
 
-scan_root() {
-  box "ROOT"
-  if command -v su >/dev/null 2>&1; then
-    echo -e "${Y}⚠ Root detectado${N}"; add 2
-  else
-    echo -e "${G}✔ OK${N}"
-  fi
+# ===== SCANS =====
+
+scan_root(){
+box "ROOT"
+command -v su >/dev/null && echo -e "${Y}⚠ Root detectado${N}" && add 2 || echo -e "${G}✔ OK${N}"
 }
 
-scan_adb() {
-  box "ADB"
-  adb1=$(settings get global adb_enabled 2>/dev/null)
-  adb2=$(settings get global adb_wifi_enabled 2>/dev/null)
-
-  [ "$adb1" = "1" ] && echo -e "${Y}⚠ USB Debug ativo${N}" && add 1 || echo -e "${G}✔ USB off${N}"
-  [ "$adb2" = "1" ] && echo -e "${Y}⚠ ADB Wi-Fi ativo${N}" && add 1
+scan_adb(){
+box "ADB"
+a=$(settings get global adb_enabled 2>/dev/null)
+b=$(settings get global adb_wifi_enabled 2>/dev/null)
+[ "$a" = "1" ] && echo -e "${Y}USB ativo${N}" && add 1 || echo "USB off"
+[ "$b" = "1" ] && echo -e "${Y}WiFi ativo${N}" && add 1
 }
 
-scan_tmp() {
-  box "TMP"
-  c=$(ls /data/local/tmp 2>/dev/null | wc -l)
-  [ "$c" -gt 0 ] && echo -e "${Y}⚠ Arquivos suspeitos${N}" && add 1 || echo -e "${G}✔ Limpo${N}"
+scan_tmp(){
+box "TMP"
+l=$(ls /data/local/tmp 2>/dev/null)
+[ -n "$l" ] && echo "$l" && add 1 || echo -e "${G}✔ Limpo${N}"
 }
 
-scan_logs() {
-  box "LOGS"
-  l=$(logcat -d 2>/dev/null | wc -l)
-  [ "$l" -lt 50 ] && echo -e "${Y}⚠ Poucos logs${N}" && add 1 || echo -e "${G}✔ OK${N}"
+scan_logs(){
+box "LOGS"
+c=$(logcat -d 2>/dev/null | wc -l)
+[ "$c" -lt 50 ] && echo "Poucos logs" && add 1 || echo "OK"
 }
 
-scan_app() {
-  box "APP"
-  pm list packages | grep -q "$PKG" \
-    && echo -e "${G}✔ $GAME instalado${N}" \
-    || { echo -e "${R}✖ Não encontrado${N}"; add 1; }
+scan_apps(){
+box "APPS"
+p=$(pm list packages | grep -Ei "mod|cheat|hack")
+[ -n "$p" ] && echo "$p" && add 2 || echo "Nenhum"
 }
 
-scan_replay() {
-  box "REPLAYS"
-  SRC="/sdcard/Android/data/com.dts.freefiremax/files/MReplays"
-  DST="/sdcard/Android/data/com.dts.freefireth/files/MReplays"
-
-  [ ! -d "$SRC" ] && echo "Origem não encontrada" && return
-  [ ! -d "$DST" ] && echo "Destino não encontrado" && return
-
-  S=$(ls -t "$SRC"/*.json 2>/dev/null | head -1)
-  D=$(ls -t "$DST"/*.json 2>/dev/null | head -1)
-
-  [ -z "$S" ] || [ -z "$D" ] && echo "Sem dados" && return
-
-  h1=$(md5sum "$S" 2>/dev/null | cut -d ' ' -f1)
-  h2=$(md5sum "$D" 2>/dev/null | cut -d ' ' -f1)
-
-  if [ "$h1" = "$h2" ]; then
-    echo -e "${R}❗ Replay idêntico (hash)${N}"; add 3
-  fi
-
-  t1=$(stat -c %Y "$S" 2>/dev/null)
-  t2=$(stat -c %Y "$D" 2>/dev/null)
-  diff=$((t2 - t1))
-
-  if [ "$diff" -ge 0 ] && [ "$diff" -le 60 ]; then
-    echo -e "${Y}⚠ Transferência recente${N}"; add 1
-  fi
+scan_proc(){
+box "PROCESSOS"
+ps -A 2>/dev/null | grep -Ei "frida|inject" && add 2 || echo "OK"
 }
 
-# ========= RELATÓRIO =========
-report() {
-  line
-  echo -e "${P1}TOTAL DE DETECÇÕES: ${W}$TOTAL${N}"
-  if [ "$TOTAL" -ge 5 ]; then
-    echo -e "${R}ALTO INDÍCIO${N}"
-  elif [ "$TOTAL" -ge 2 ]; then
-    echo -e "${Y}SUSPEITO${N}"
-  else
-    echo -e "${G}LIMPO${N}"
-  fi
-  line
-
-  echo "$(date) | $GAME | DET=$TOTAL" >> "$HISTORY_FILE"
+scan_files(){
+box "ARQUIVOS"
+f=$(find /sdcard -iname "*mod*" -o -iname "*cheat*" 2>/dev/null | head -5)
+[ -n "$f" ] && echo "$f" && add 1 || echo "Nada"
 }
 
-# ========= RUN =========
+scan_replay(){
+box "REPLAY"
+S=$(ls -t /sdcard/Android/data/com.dts.freefiremax/files/MReplays/*.json 2>/dev/null | head -1)
+D=$(ls -t /sdcard/Android/data/com.dts.freefireth/files/MReplays/*.json 2>/dev/null | head -1)
+
+[ -z "$S" ] || [ -z "$D" ] && echo "Sem dados" && return
+
+h1=$(md5sum "$S" | cut -d ' ' -f1)
+h2=$(md5sum "$D" | cut -d ' ' -f1)
+
+[ "$h1" = "$h2" ] && echo "Replay igual" && add 3
+
+t1=$(stat -c %Y "$S"); t2=$(stat -c %Y "$D")
+d=$((t2-t1))
+[ "$d" -lt 60 ] && echo "Transferido recente" && add 1
+}
+
+# ===== RELATÓRIO =====
+report(){
+line
+echo -e "${P1}TOTAL: $TOTAL${N}"
+[ "$TOTAL" -ge 5 ] && echo -e "${R}ALTO RISCO${N}" || \
+[ "$TOTAL" -ge 2 ] && echo -e "${Y}SUSPEITO${N}" || \
+echo -e "${G}LIMPO${N}"
+
+echo "$(date) | $GAME | $TOTAL" >> "$HISTORY"
+line
+}
+
+# ===== RUN =====
 login
-check_expiration
 select_game
-
 banner
-box "INICIANDO SCAN DE $GAME"
-loading_ultra
+loading
 
 scan_root
 scan_adb
 scan_tmp
 scan_logs
-scan_app
+scan_apps
+scan_proc
+scan_files
 scan_replay
 
 report
 
-echo -e "${P2}SCAN FINALIZADO${N}"
+echo -e "${P1}FINALIZADO${N}"

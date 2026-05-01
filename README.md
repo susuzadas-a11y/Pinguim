@@ -60,6 +60,6 @@ Tudo isso de forma automatizada e rápida.
 
 <div align="center">
 
-### 🐧 Obrigado por usar o Pinguim Isca Scan
+### 🐧 Obrigado por usar o Pinguim SCAN
 
 </div>

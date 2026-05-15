@@ -1,192 +1,409 @@
 #!/data/data/com.termux/files/usr/bin/bash
 
-# ===== CONFIG =====
-TOTAL=0
-PKG=""
-GAME=""
-SOURCE="Desconhecido"
-
-FOUND_ROOT=""
-FOUND_APPS=""
-FOUND_FILES=""
-FOUND_PROC=""
+#═══════════════════════════════════════
+#           P I N G U I M
+#             P A N E L
+#═══════════════════════════════════════
 
 # ===== CORES =====
 P='\033[1;35m'
 G='\033[1;32m'
-Y='\033[1;33m'
 R='\033[1;31m'
+Y='\033[1;33m'
 C='\033[1;36m'
 W='\033[1;37m'
 D='\033[2m'
 N='\033[0m'
 
-beep(){ printf "\a"; }
+# ===== VARS =====
+TOTAL=0
+GAME=""
+PKG=""
+SOURCE="Desconhecido"
 
+ROOT_RESULT=""
+APP_RESULT=""
+FILE_RESULT=""
+PROC_RESULT=""
+NET_RESULT=""
+
+# ===== SOM =====
+beep(){
+printf "\a"
+}
+
+# ===== HEADER =====
 header(){
 clear
 echo -e "${P}"
-echo "╔════════════════════════════════╗"
-echo "║          P I N G U I M          ║"
-echo "║            S C A N             ║"
-echo "╚════════════════════════════════╝"
+echo "╔══════════════════════════════════╗"
+echo "║                                  ║"
+echo "║         P I N G U I M            ║"
+echo "║            P A N E L             ║"
+echo "║                                  ║"
+echo "╚══════════════════════════════════╝"
 echo -e "${N}"
 }
 
-add(){ TOTAL=$((TOTAL+$1)); }
+# ===== ADD SCORE =====
+add(){
+TOTAL=$((TOTAL+$1))
+}
 
-# ===== ADB AUTO (INÍCIO) =====
-adb_auto(){
+# ===== LOADING =====
+loading(){
+echo ""
+echo -ne "${C}INICIANDO"
+for i in 1 2 3 4 5; do
+echo -ne "."
+sleep 0.2
+done
+echo -e "${N}"
+echo ""
+}
+
+# ===== ADB =====
+adb_connect(){
 header
-echo "CONECTAR DEPURAÇÃO WIFI"
+
+echo -e "${C}DEPURAÇÃO WIFI${N}"
 echo ""
 
 read -p "IP: " ip
 read -p "PORTA: " port
 
 echo ""
-echo "Conectando..."
+echo -e "${Y}CONECTANDO...${N}"
 
 adb connect ${ip}:${port} >/dev/null 2>&1
 
 if [ $? -eq 0 ]; then
 echo -e "${G}✔ CONECTADO${N}"
 else
-echo -e "${R}✖ FALHA (pode continuar mesmo assim)${N}"
+echo -e "${R}✖ FALHA NA CONEXÃO${N}"
 fi
 
-sleep 1
+sleep 2
 }
 
-# ===== JOGO =====
+# ===== SELECT GAME =====
 select_game(){
 header
+
+echo -e "${W}SELECIONE O JOGO${N}"
+echo ""
 echo "1 - Free Fire"
 echo "2 - Free Fire MAX"
-read -p "Escolha: " op
+echo ""
+
+read -p "ESCOLHA: " op
 
 case "$op" in
-1) PKG="com.dts.freefireth"; GAME="Free Fire" ;;
-2) PKG="com.dts.freefiremax"; GAME="Free Fire MAX" ;;
-*) select_game ;;
+
+1)
+PKG="com.dts.freefireth"
+GAME="FREE FIRE"
+;;
+
+2)
+PKG="com.dts.freefiremax"
+GAME="FREE FIRE MAX"
+;;
+
+*)
+select_game
+;;
+
 esac
 }
 
-# ===== ROOT DETALHADO =====
+# ===== ROOT =====
 scan_root(){
-FOUND_ROOT=""
 
 if command -v su >/dev/null 2>&1; then
+
 if su -c "id" >/dev/null 2>&1; then
-FOUND_ROOT="ROOT REAL (su funcional)"
-add 3
+
+ROOT_RESULT="ROOT REAL DETECTADO"
+add 4
+
 else
-FOUND_ROOT="POSSÍVEL ROOT (su bloqueado)"
-add 1
+
+ROOT_RESULT="SU ENCONTRADO"
+add 2
+
 fi
+
 else
-FOUND_ROOT="Sem root"
+
+ROOT_RESULT="SEM ROOT"
+
+fi
+}
+
+# ===== APPS =====
+scan_apps(){
+
+APPS=$(pm list packages | grep -Ei \
+"mod|hack|cheat|inject|script|menu|vip")
+
+if [ -n "$APPS" ]; then
+
+APP_RESULT=$(echo "$APPS" | \
+sed 's/package://g' | head -10)
+
+add 2
+
+else
+
+APP_RESULT=""
+
+fi
+}
+
+# ===== FILES =====
+scan_files(){
+
+FILES=$(find /sdcard -maxdepth 3 \
+\( -iname "*mod*" \
+-o -iname "*hack*" \
+-o -iname "*cheat*" \
+-o -iname "*inject*" \) \
+2>/dev/null | head -10)
+
+if [ -n "$FILES" ]; then
+
+while read f; do
+
+DATE=$(stat -c %y "$f" 2>/dev/null | cut -d'.' -f1)
+
+FILE_RESULT="${FILE_RESULT}${f} | ${DATE}\n"
+
+done <<< "$FILES"
+
+add 2
+
+fi
+}
+
+# ===== PROCESS =====
+scan_process(){
+
+PROC=$(ps -A | grep -Ei \
+"frida|inject|speed|hack" | grep -v grep)
+
+if [ -n "$PROC" ]; then
+
+PROC_RESULT=$(echo "$PROC" | head -10)
+
+add 5
+
+fi
+}
+
+# ===== NETWORK =====
+scan_network(){
+
+PORT=$(netstat -an 2>/dev/null | grep 27042)
+
+if [ -n "$PORT" ]; then
+
+NET_RESULT="PORTA FRIDA 27042 DETECTADA"
+
+add 5
+
+fi
+}
+
+# ===== SOURCE =====
+scan_source(){
+
+inst=$(dumpsys package "$PKG" 2>/dev/null | \
+grep installerPackageName)
+
+echo "$inst" | grep -qi "vending"
+
+if [ $? -eq 0 ]; then
+
+SOURCE="PLAY STORE"
+
+else
+
+SOURCE="APK EXTERNO"
+add 1
+
 fi
 }
 
 # ===== SCAN =====
-scan_all(){
+start_scan(){
+
 TOTAL=0
-FOUND_APPS=""
-FOUND_FILES=""
-FOUND_PROC=""
 
-# ROOT
+ROOT_RESULT=""
+APP_RESULT=""
+FILE_RESULT=""
+PROC_RESULT=""
+NET_RESULT=""
+
+loading
+
 scan_root
-
-# APPS
-FOUND_APPS=$(pm list packages | grep -Ei "mod|hack|cheat|inject" | sed 's/package://g' | head -10)
-[ -n "$FOUND_APPS" ] && add 2
-
-# FILES
-FILES=$(find /sdcard -iname "*mod*" -o -iname "*hack*" 2>/dev/null | head -5)
-if [ -n "$FILES" ]; then
-for f in $FILES; do
-DATA=$(stat -c %y "$f" 2>/dev/null | cut -d'.' -f1)
-FOUND_FILES+="$f | $DATA\n"
-done
-add 2
-fi
-
-# PROCESSOS
-FOUND_PROC=$(ps | grep -Ei "frida|inject" | grep -v grep | head -5)
-[ -n "$FOUND_PROC" ] && add 3
-
-# ORIGEM
-inst=$(dumpsys package "$PKG" 2>/dev/null | grep installerPackageName)
-echo "$inst" | grep -qi "vending" && SOURCE="Play Store" || SOURCE="APK Externo"
+scan_apps
+scan_files
+scan_process
+scan_network
+scan_source
 
 beep
 }
 
-# ===== RESULT =====
+# ===== SECTION =====
 section(){
+
 echo -e "${C}▶ $1${N}"
-[ -n "$2" ] && echo -e "${Y}$2${N}" || echo -e "${G}✔ Nada encontrado${N}"
-echo ""
-}
 
-result(){
-header
+if [ -n "$2" ]; then
 
-echo "🎮 $GAME"
-echo "📦 Origem: $SOURCE"
-echo ""
+echo -e "${Y}$2${N}"
 
-section "ROOT" "$FOUND_ROOT"
-section "APPS SUSPEITOS" "$FOUND_APPS"
-section "ARQUIVOS SUSPEITOS" "$FOUND_FILES"
-section "PROCESSOS SUSPEITOS" "$FOUND_PROC"
-
-echo "=============================="
-echo "⚠ SCORE: $TOTAL"
-echo ""
-
-if [ "$TOTAL" -ge 5 ]; then
-echo -e "${R}🚨 ALTO RISCO${N}"
-echo -e "${Y}APLIQUE O WO IMEDIATAMENTE${N}"
-elif [ "$TOTAL" -ge 1 ]; then
-echo -e "${Y}⚠ SUSPEITO${N}"
-echo -e "${Y}PROCURE O SS PINGUIM${N}"
 else
-echo -e "${G}✔ LIMPO${N}"
+
+echo -e "${G}✔ NADA ENCONTRADO${N}"
+
 fi
 
 echo ""
-echo -e "${D}Créditos: PINGUIM SCAN${N}"
+}
 
+# ===== RESULT =====
+result(){
+
+header
+
+echo -e "${W}JOGO:${N} ${C}$GAME${N}"
+echo -e "${W}ORIGEM:${N} ${Y}$SOURCE${N}"
+
+echo ""
+echo "════════════════════════════"
+echo ""
+
+section "ROOT" "$ROOT_RESULT"
+section "APPS SUSPEITOS" "$APP_RESULT"
+section "ARQUIVOS SUSPEITOS" "$FILE_RESULT"
+section "PROCESSOS SUSPEITOS" "$PROC_RESULT"
+section "REDE SUSPEITA" "$NET_RESULT"
+
+echo "════════════════════════════"
+echo ""
+
+echo -e "${W}SCORE:${N} ${R}$TOTAL${N}"
+echo ""
+
+if [ "$TOTAL" -ge 8 ]; then
+
+echo -e "${R}🚨 ALTO RISCO${N}"
+
+elif [ "$TOTAL" -ge 3 ]; then
+
+echo -e "${Y}⚠ SUSPEITO${N}"
+
+else
+
+echo -e "${G}✔ LIMPO${N}"
+
+fi
+
+echo ""
+echo -e "${D}PINGUIM PANEL${N}"
+
+echo ""
 read -p "ENTER..."
+}
+
+# ===== LOG =====
+save_log(){
+
+mkdir -p /sdcard/PinguimLogs
+
+LOG="/sdcard/PinguimLogs/scan_$(date +%H%M%S).txt"
+
+echo "PINGUIM PANEL" > "$LOG"
+echo "" >> "$LOG"
+
+echo "GAME: $GAME" >> "$LOG"
+echo "SOURCE: $SOURCE" >> "$LOG"
+echo "SCORE: $TOTAL" >> "$LOG"
+
+echo "" >> "$LOG"
+
+echo "$ROOT_RESULT" >> "$LOG"
+echo "$APP_RESULT" >> "$LOG"
+echo -e "$FILE_RESULT" >> "$LOG"
+echo "$PROC_RESULT" >> "$LOG"
+echo "$NET_RESULT" >> "$LOG"
 }
 
 # ===== MENU =====
 menu(){
+
 while true; do
+
 header
 
-echo -e "${W}Jogo:${N} ${C}${GAME:-Nenhum}${N}"
-echo ""
+echo -e "${W}JOGO:${N} ${C}${GAME:-NENHUM}${N}"
 
+echo ""
 echo "1 - INICIAR SCAN"
 echo "2 - TROCAR JOGO"
-echo "3 - SAIR"
+echo "3 - CONECTAR ADB"
+echo "4 - SAIR"
+echo ""
 
-read -p "Escolha: " op
+read -p "ESCOLHA: " op
 
 case "$op" in
-1) [ -z "$PKG" ] && select_game; scan_all; result ;;
-2) select_game ;;
-3) exit ;;
-*) echo "Opção inválida"; sleep 1 ;;
+
+1)
+
+[ -z "$PKG" ] && select_game
+
+start_scan
+save_log
+result
+
+;;
+
+2)
+
+select_game
+
+;;
+
+3)
+
+adb_connect
+
+;;
+
+4)
+
+exit
+
+;;
+
+*)
+
+echo ""
+echo -e "${R}OPÇÃO INVÁLIDA${N}"
+sleep 1
+
+;;
+
 esac
 
 done
 }
 
 # ===== START =====
-adb_auto
 menu

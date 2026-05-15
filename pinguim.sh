@@ -1,9 +1,10 @@
 #!/data/data/com.termux/files/usr/bin/bash
 
-#═══════════════════════════════════════
-#        P I N G U I M  P A N E L
-#                 V2
-#═══════════════════════════════════════
+#═══════════════════════════════════════════════
+#              P I N G U I M
+#                 P A N E L
+#                    V3
+#═══════════════════════════════════════════════
 
 # ===== CORES =====
 P='\033[1;35m'
@@ -13,64 +14,84 @@ Y='\033[1;33m'
 C='\033[1;36m'
 W='\033[1;37m'
 D='\033[2m'
+B='\033[1m'
 N='\033[0m'
 
-# ===== VARS =====
-TOTAL=0
+# ===== CONFIG =====
+VERSION="3.0"
+AUTHOR="PINGUIM"
+LOG_DIR="/sdcard/PinguimLogs"
+
 GAME="FREE FIRE"
 PKG="com.dts.freefireth"
 
+TOTAL=0
+
 ROOT_RESULT=""
+FRAME_RESULT=""
 APP_RESULT=""
 FILE_RESULT=""
 PROC_RESULT=""
 NET_RESULT=""
-FRAME_RESULT=""
 APK_RESULT=""
 
-LOG_DIR="/sdcard/PinguimLogs"
+#═══════════════════════════════════════════════
+#                    UI
+#═══════════════════════════════════════════════
 
-# ===== SOM =====
 beep(){
 printf "\a"
 }
 
-# ===== HEADER =====
+line(){
+echo -e "${D}═══════════════════════════════════════════════${N}"
+}
+
 header(){
+
 clear
 
 echo -e "${P}"
-echo "╔══════════════════════════════════╗"
-echo "║                                  ║"
-echo "║         P I N G U I M            ║"
-echo "║            P A N E L             ║"
-echo "║               V2                 ║"
-echo "║                                  ║"
-echo "╚══════════════════════════════════╝"
+echo " ██████╗ ██╗███╗   ██╗ ██████╗ ██╗   ██╗██╗███╗   ███╗"
+echo " ██╔══██╗██║████╗  ██║██╔════╝ ██║   ██║██║████╗ ████║"
+echo " ██████╔╝██║██╔██╗ ██║██║  ███╗██║   ██║██║██╔████╔██║"
+echo " ██╔═══╝ ██║██║╚██╗██║██║   ██║██║   ██║██║██║╚██╔╝██║"
+echo " ██║     ██║██║ ╚████║╚██████╔╝╚██████╔╝██║██║ ╚═╝ ██║"
+echo " ╚═╝     ╚═╝╚═╝  ╚═══╝ ╚═════╝  ╚═════╝ ╚═╝╚═╝     ╚═╝"
 echo -e "${N}"
+
+echo -e "${D}               PANEL V${VERSION} | ${AUTHOR}${N}"
+echo ""
+
+line
 }
 
-# ===== SCORE =====
-add(){
-TOTAL=$((TOTAL+$1))
-}
-
-# ===== LOADING =====
 loading(){
 
 echo ""
 
-for i in 10 20 30 40 50 60 70 80 90 100
+for i in 5 10 15 20 30 40 50 60 70 80 90 100
 do
-echo -ne "\r${C}SCANEANDO... ${i}%${N}"
-sleep 0.15
+echo -ne "\r${C}SCANEANDO SISTEMA... ${i}%${N}"
+sleep 0.12
 done
 
 echo ""
 echo ""
 }
 
-# ===== ROOT =====
+#═══════════════════════════════════════════════
+#                  SCORE
+#═══════════════════════════════════════════════
+
+add(){
+TOTAL=$((TOTAL+$1))
+}
+
+#═══════════════════════════════════════════════
+#                  ROOT
+#═══════════════════════════════════════════════
+
 scan_root(){
 
 if command -v su >/dev/null 2>&1; then
@@ -82,7 +103,7 @@ add 5
 
 else
 
-ROOT_RESULT="SU ENCONTRADO"
+ROOT_RESULT="SU DETECTADO"
 add 2
 
 fi
@@ -94,7 +115,10 @@ ROOT_RESULT="SEM ROOT"
 fi
 }
 
-# ===== FRAMEWORK =====
+#═══════════════════════════════════════════════
+#               FRAMEWORKS
+#═══════════════════════════════════════════════
+
 scan_frameworks(){
 
 FRAME=$(pm list packages | grep -Ei \
@@ -110,7 +134,10 @@ add 5
 fi
 }
 
-# ===== APPS =====
+#═══════════════════════════════════════════════
+#                  APPS
+#═══════════════════════════════════════════════
+
 scan_apps(){
 
 APPS=$(pm list packages | grep -Ei \
@@ -126,10 +153,13 @@ add 3
 fi
 }
 
-# ===== FILES =====
+#═══════════════════════════════════════════════
+#                  FILES
+#═══════════════════════════════════════════════
+
 scan_files(){
 
-FILES=$(find /sdcard \
+FILES=$(find \
 /sdcard/Download \
 /sdcard/Documents \
 -maxdepth 3 \
@@ -159,7 +189,10 @@ add 2
 fi
 }
 
-# ===== PROCESS =====
+#═══════════════════════════════════════════════
+#                PROCESSOS
+#═══════════════════════════════════════════════
+
 scan_process(){
 
 PROC=$(ps -A 2>/dev/null || ps)
@@ -178,7 +211,10 @@ add 6
 fi
 }
 
-# ===== NETWORK =====
+#═══════════════════════════════════════════════
+#                  PORTAS
+#═══════════════════════════════════════════════
+
 scan_network(){
 
 PORT=$(ss -an 2>/dev/null | \
@@ -193,7 +229,10 @@ add 5
 fi
 }
 
-# ===== APK =====
+#═══════════════════════════════════════════════
+#                 APK HASH
+#═══════════════════════════════════════════════
+
 scan_apk(){
 
 APK=$(pm path "$PKG" 2>/dev/null | \
@@ -201,14 +240,69 @@ head -1 | cut -d':' -f2)
 
 if [ -n "$APK" ]; then
 
-HASH=$(sha256sum "$APK" 2>/dev/null | awk '{print $1}')
+HASH=$(sha256sum "$APK" 2>/dev/null | \
+awk '{print $1}')
 
 APK_RESULT="$HASH"
 
 fi
 }
 
-# ===== SECTION =====
+#═══════════════════════════════════════════════
+#                  LOG
+#═══════════════════════════════════════════════
+
+save_log(){
+
+mkdir -p "$LOG_DIR"
+
+LOG="$LOG_DIR/scan_$(date +%d%m%Y_%H%M%S).txt"
+
+{
+
+echo "PINGUIM PANEL V${VERSION}"
+echo ""
+
+echo "DATA: $(date)"
+echo "GAME: $GAME"
+echo "PACKAGE: $PKG"
+echo "SCORE: $TOTAL"
+
+echo ""
+echo "[ROOT]"
+echo "$ROOT_RESULT"
+
+echo ""
+echo "[FRAMEWORK]"
+echo "$FRAME_RESULT"
+
+echo ""
+echo "[APPS]"
+echo "$APP_RESULT"
+
+echo ""
+echo "[FILES]"
+echo -e "$FILE_RESULT"
+
+echo ""
+echo "[PROCESS]"
+echo "$PROC_RESULT"
+
+echo ""
+echo "[NETWORK]"
+echo "$NET_RESULT"
+
+echo ""
+echo "[APK SHA256]"
+echo "$APK_RESULT"
+
+} > "$LOG"
+}
+
+#═══════════════════════════════════════════════
+#                 SECTION
+#═══════════════════════════════════════════════
+
 section(){
 
 echo -e "${C}▶ $1${N}"
@@ -226,55 +320,10 @@ fi
 echo ""
 }
 
-# ===== SAVE LOG =====
-save_log(){
+#═══════════════════════════════════════════════
+#                 RESULTADO
+#═══════════════════════════════════════════════
 
-mkdir -p "$LOG_DIR"
-
-LOG="$LOG_DIR/scan_$(date +%d%m%Y_%H%M%S).txt"
-
-{
-echo "PINGUIM PANEL V2"
-echo ""
-echo "DATA: $(date)"
-echo ""
-echo "GAME: $GAME"
-echo "PACKAGE: $PKG"
-echo "SCORE: $TOTAL"
-echo ""
-
-echo "[ROOT]"
-echo "$ROOT_RESULT"
-echo ""
-
-echo "[FRAMEWORK]"
-echo "$FRAME_RESULT"
-echo ""
-
-echo "[APPS]"
-echo "$APP_RESULT"
-echo ""
-
-echo "[FILES]"
-echo -e "$FILE_RESULT"
-echo ""
-
-echo "[PROCESS]"
-echo "$PROC_RESULT"
-echo ""
-
-echo "[NETWORK]"
-echo "$NET_RESULT"
-echo ""
-
-echo "[APK HASH]"
-echo "$APK_RESULT"
-echo ""
-
-} > "$LOG"
-}
-
-# ===== RESULT =====
 result(){
 
 header
@@ -282,8 +331,7 @@ header
 echo -e "${W}GAME:${N} ${C}$GAME${N}"
 echo -e "${W}PACKAGE:${N} ${Y}$PKG${N}"
 
-echo ""
-echo "════════════════════════════"
+line
 echo ""
 
 section "ROOT" "$ROOT_RESULT"
@@ -294,8 +342,7 @@ section "PROCESSOS SUSPEITOS" "$PROC_RESULT"
 section "PORTAS SUSPEITAS" "$NET_RESULT"
 section "SHA256 APK" "$APK_RESULT"
 
-echo "════════════════════════════"
-echo ""
+line
 
 if [ "$TOTAL" -ge 12 ]; then
 
@@ -311,28 +358,31 @@ STATUS="${G}✔ LIMPO${N}"
 
 fi
 
-echo -e "${W}SCORE:${N} ${R}$TOTAL${N}"
+echo ""
+echo -e "${W}RISK SCORE:${N} ${R}$TOTAL${N}"
 echo ""
 echo -e "$STATUS"
 
 echo ""
-echo -e "${D}LOG SALVO EM:${N}"
-echo -e "${C}$LOG_DIR${N}"
+echo -e "${D}LOG:${N} ${C}$LOG${N}"
 
 echo ""
 }
 
-# ===== START SCAN =====
+#═══════════════════════════════════════════════
+#                  START
+#═══════════════════════════════════════════════
+
 start_scan(){
 
 TOTAL=0
 
 ROOT_RESULT=""
+FRAME_RESULT=""
 APP_RESULT=""
 FILE_RESULT=""
 PROC_RESULT=""
 NET_RESULT=""
-FRAME_RESULT=""
 APK_RESULT=""
 
 loading
@@ -350,7 +400,10 @@ save_log
 beep
 }
 
-# ===== MENU =====
+#═══════════════════════════════════════════════
+#                   MENU
+#═══════════════════════════════════════════════
+
 menu(){
 
 while true
@@ -358,13 +411,14 @@ do
 
 header
 
-echo -e "${W}JOGO:${N} ${C}$GAME${N}"
+echo -e "${W}GAME:${N} ${C}$GAME${N}"
 
 echo ""
-echo "1 - INICIAR SCAN"
-echo "2 - FREE FIRE MAX"
-echo "3 - FREE FIRE"
-echo "4 - SAIR"
+echo -e "${G}[1]${N} INICIAR SCAN"
+echo -e "${G}[2]${N} FREE FIRE"
+echo -e "${G}[3]${N} FREE FIRE MAX"
+echo -e "${G}[4]${N} SAIR"
+
 echo ""
 
 read -p "ESCOLHA: " op
@@ -382,20 +436,21 @@ read -p "ENTER..."
 
 2)
 
-GAME="FREE FIRE MAX"
-PKG="com.dts.freefiremax"
-
-;;
-
-3)
-
 GAME="FREE FIRE"
 PKG="com.dts.freefireth"
 
 ;;
 
+3)
+
+GAME="FREE FIRE MAX"
+PKG="com.dts.freefiremax"
+
+;;
+
 4)
 
+clear
 exit
 
 ;;
@@ -413,11 +468,15 @@ esac
 done
 }
 
-# ===== AUTO START =====
+#═══════════════════════════════════════════════
+#                 AUTO START
+#═══════════════════════════════════════════════
 
 header
+
 echo ""
 echo -e "${C}INICIANDO SCAN AUTOMÁTICO...${N}"
+
 sleep 1
 
 start_scan
